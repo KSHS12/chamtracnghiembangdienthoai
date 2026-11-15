@@ -198,9 +198,34 @@ function validKey(k){
     k.p3.every(x=>x!=="")&&[...k.w1,...k.w2,...k.w3].every(x=>Number.isFinite(x)&&x>=0);
 }
 function readKeys(){
-  try{return JSON.parse(localStorage.getItem("omr_keys_v2")||"{}");}
-  catch{return {};}
+  let keys={};
+
+  try{
+    keys=JSON.parse(localStorage.getItem("omr_keys_v2")||"{}");
+  }catch{
+    keys={};
+  }
+
+  // Chuyển các mã đã lưu từ bản cũ sang danh sách mới
+  for(let i=0;i<localStorage.length;i++){
+    const oldName=localStorage.key(i);
+
+    if(oldName && oldName.startsWith("omr_key_")){
+      const code=oldName.slice("omr_key_".length);
+
+      if(!keys[code]){
+        try{
+          const oldKey=JSON.parse(localStorage.getItem(oldName)||"null");
+          if(oldKey && oldKey.code) keys[code]=oldKey;
+        }catch{}
+      }
+    }
+  }
+
+  localStorage.setItem("omr_keys_v2",JSON.stringify(keys));
+  return keys;
 }
+
 function refreshKeyList(){
   const keys=readKeys(),select=document.getElementById("savedCodes");
   select.innerHTML='<option value="">Chọn mã đề</option>';
