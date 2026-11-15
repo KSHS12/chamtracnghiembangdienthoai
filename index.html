@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Chấm phiếu trắc nghiệm — Bản thử</title>
+
   <style>
     *{box-sizing:border-box}
     body{margin:0;background:#f2f5fa;color:#172033;font-family:Arial,sans-serif}
@@ -38,16 +39,19 @@
     .shortrow{display:grid;grid-template-columns:72px 1fr 100px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #edf0f5}
     .shortrow input.answer{width:100%}
     video,#photo{width:100%;max-height:65vh;object-fit:contain;background:#111;border-radius:8px}
+    video{display:block}
     #photo{display:none;background:white}
     #markCanvas{width:100%;max-height:70vh;object-fit:contain;border:1px solid #ccd5e2;touch-action:manipulation}
     .status{margin-top:8px;min-height:20px;line-height:1.4}
-    .ok{color:#087443}.bad{color:#b42318}
+    .ok{color:#087443}
+    .bad{color:#b42318}
     .score{padding:12px;background:#e7f7ed;border-radius:8px;color:#14502f;font-weight:bold;font-size:19px;margin:10px 0}
     .hidden{display:none!important}
     .tablewrap{overflow-x:auto}
     table{border-collapse:collapse;width:100%;margin-top:10px}
     th,td{border-bottom:1px solid #e1e7f0;padding:8px;text-align:left;font-size:13px}
     th{background:#f3f6fb}
+
     @media(max-width:560px){
       header h1{font-size:19px}
       section{padding:12px}
@@ -59,6 +63,7 @@
     }
   </style>
 </head>
+
 <body>
 <header>
   <h1>Chấm phiếu trắc nghiệm THPT</h1>
@@ -72,6 +77,7 @@
       Chọn đáp án ngay trên bảng. Có thể sửa điểm tối đa của từng câu;
       riêng Phần II, nhập điểm tối đa riêng cho từng câu.
     </p>
+
     <div class="row">
       <label class="field">Mã đề
         <input id="examCode" placeholder="Ví dụ: 1024">
@@ -100,18 +106,24 @@
 
   <section>
     <h2>2. Chụp hoặc chọn ảnh phiếu</h2>
+
     <div class="buttons">
       <button id="startCamera">Mở camera</button>
       <button id="takePhoto" disabled>Chụp phiếu</button>
+
       <label class="choice">Chọn ảnh
         <input id="fileInput" type="file" accept="image/*" style="display:none">
       </label>
+
       <button id="stopCamera" class="secondary" disabled>Tắt camera</button>
     </div>
+
     <p class="muted">Chụp trọn phiếu, đủ sáng và thấy rõ bốn dấu vuông căn góc.</p>
-    <video id="video" autoplay playsinline class="hidden"></video>
+
+    <video id="video" autoplay playsinline muted class="hidden"></video>
     <canvas id="capture" class="hidden"></canvas>
     <img id="photo" alt="Ảnh phiếu">
+
     <div id="cameraStatus" class="status"></div>
 
     <div id="alignArea" class="hidden">
@@ -119,39 +131,48 @@
         Chạm tâm bốn dấu vuông ngoài của phiếu theo thứ tự:
         trên trái → trên phải → dưới phải → dưới trái.
       </p>
+
       <canvas id="markCanvas"></canvas>
+
       <div class="buttons">
         <button id="undoCorner" class="secondary">Bỏ điểm cuối</button>
         <button id="scanButton">Căn chỉnh và đọc phiếu</button>
       </div>
+
       <div id="scanStatus" class="status"></div>
     </div>
   </section>
 
   <section id="reviewSection" class="hidden">
     <h2>3. Kiểm tra kết quả máy đọc</h2>
+
     <p class="note">
       Sửa các câu máy đọc sai hoặc chưa rõ. Hãy kiểm tra kỹ Phần III nếu đáp án có dấu phẩy
       hoặc dấu âm trước khi lưu điểm.
     </p>
+
     <div id="reviewP1"></div>
     <div id="reviewP2"></div>
     <div id="reviewP3"></div>
     <div id="scoreBox" class="score"></div>
+
     <div class="buttons">
       <button id="savePaper">Lưu ảnh và điểm</button>
       <button id="nextPaper" class="secondary">Bài tiếp theo</button>
     </div>
+
     <div id="saveStatus" class="status"></div>
   </section>
 
   <section>
     <h2>4. Bài đã lưu trên thiết bị này</h2>
     <p class="muted">Ảnh và điểm lưu trong trình duyệt của thiết bị đang chấm.</p>
+
     <div class="buttons">
       <button id="refreshList" class="secondary">Cập nhật danh sách</button>
       <button id="exportCsv" class="secondary">Xuất bảng điểm CSV</button>
     </div>
+
     <div id="savedList"></div>
   </section>
 </main>
@@ -169,7 +190,12 @@ const DIGIT_X=[79,184,289,394,498,603];
 const DIGIT_Y=Array.from({length:10},(_,i)=>794+i*15.4);
 const DIGIT_STEP=14.8;
 
-let cameraStream=null, imageBlob=null, corners=[], scanned=null, cvLoading=null;
+let cameraStream=null;
+let imageBlob=null;
+let corners=[];
+let scanned=null;
+let cvLoading=null;
+
 const video=document.getElementById("video");
 const photo=document.getElementById("photo");
 const markCanvas=document.getElementById("markCanvas");
@@ -178,34 +204,48 @@ const markCtx=markCanvas.getContext("2d");
 function radio(value,name,checked,label){
   return `<label class="choice"><input type="radio" name="${name}" value="${value}" ${checked?"checked":""}><span>${label}</span></label>`;
 }
+
 function buildKeyUI(){
   const p1=document.getElementById("keyP1");
+
   for(let q=0;q<12;q++){
-    p1.insertAdjacentHTML("beforeend",
+    p1.insertAdjacentHTML(
+      "beforeend",
       `<div class="keyrow"><b>Câu ${q+1}</b><div class="choice-set">`+
       ["A","B","C","D"].map(v=>radio(v,`kp1_${q}`,false,v)).join("")+
-      `</div><label>Điểm<br><input class="weight" type="number" min="0" step="0.01" value="0.25" id="w1_${q}"></label></div>`);
+      `</div><label>Điểm<br><input class="weight" type="number" min="0" step="0.01" value="0.25" id="w1_${q}"></label></div>`
+    );
   }
+
   const p2=document.getElementById("keyP2");
+
   for(let q=0;q<4;q++){
     let html=`<div class="tfcard"><div class="tfhead"><span>Câu ${q+1}</span><label>Điểm tối đa <input class="weight" id="w2_${q}" type="number" min="0" step="0.01" value="1"></label></div>`;
+
     for(let s=0;s<4;s++){
       html+=`<div class="tfline"><b>${"abcd"[s]})</b><div>${radio("D",`kp2_${q}_${s}`,false,"Đúng")}</div><div>${radio("S",`kp2_${q}_${s}`,false,"Sai")}</div></div>`;
     }
+
     html+="</div>";
     p2.insertAdjacentHTML("beforeend",html);
   }
+
   const p3=document.getElementById("keyP3");
+
   for(let q=0;q<6;q++){
-    p3.insertAdjacentHTML("beforeend",
-      `<div class="shortrow"><b>Câu ${q+1}</b><input class="answer" id="kp3_${q}" placeholder="Đáp án chuẩn"><label>Điểm<br><input class="weight" id="w3_${q}" type="number" min="0" step="0.01" value="0.5"></label></div>`);
+    p3.insertAdjacentHTML(
+      "beforeend",
+      `<div class="shortrow"><b>Câu ${q+1}</b><input class="answer" id="kp3_${q}" placeholder="Đáp án chuẩn"><label>Điểm<br><input class="weight" id="w3_${q}" type="number" min="0" step="0.01" value="0.5"></label></div>`
+    );
   }
 }
+
 buildKeyUI();
 
 function getChecked(name){
   return document.querySelector(`input[name="${name}"]:checked`)?.value||"";
 }
+
 function getKey(){
   return {
     code:document.getElementById("examCode").value.trim(),
@@ -218,258 +258,639 @@ function getKey(){
     fractions:[0,0.1,0.25,0.5,1]
   };
 }
+
 function validKey(k){
-  return k.code&&k.p1.every(x=>["A","B","C","D"].includes(x))&&
+  return k.code&&
+    k.p1.every(x=>["A","B","C","D"].includes(x))&&
     k.p2.every(r=>r.every(x=>x==="D"||x==="S"))&&
     k.p3.every(x=>x!=="")&&
     [...k.w1,...k.w2,...k.w3].every(x=>Number.isFinite(x)&&x>=0);
 }
+
 function status(id,text,error=false){
   const e=document.getElementById(id);
-  e.textContent=text;e.className="status "+(error?"bad":"ok");
+  e.textContent=text;
+  e.className="status "+(error?"bad":"ok");
 }
+
 document.getElementById("saveKey").onclick=()=>{
   const k=getKey();
-  if(!validKey(k)){status("keyStatus","Nhập mã đề, chọn đủ đáp án và nhập điểm hợp lệ cho từng câu.",true);return;}
+
+  if(!validKey(k)){
+    status("keyStatus","Nhập mã đề, chọn đủ đáp án và nhập điểm hợp lệ cho từng câu.",true);
+    return;
+  }
+
   localStorage.setItem("omr_key_"+k.code,JSON.stringify(k));
   localStorage.setItem("omr_last_key",k.code);
   status("keyStatus","Đã lưu đáp án và điểm từng câu trên thiết bị.");
 };
+
 document.getElementById("loadKey").onclick=()=>{
   const code=document.getElementById("examCode").value.trim()||localStorage.getItem("omr_last_key")||"";
-  const k=JSON.parse(localStorage.getItem("omr_key_"+code)||"null");
-  if(!k){status("keyStatus","Không tìm thấy đáp án đã lưu cho mã đề này.",true);return;}
+  let k=null;
+
+  try{
+    k=JSON.parse(localStorage.getItem("omr_key_"+code)||"null");
+  }catch{
+    k=null;
+  }
+
+  if(!k){
+    status("keyStatus","Không tìm thấy đáp án đã lưu cho mã đề này.",true);
+    return;
+  }
+
   document.getElementById("examCode").value=k.code;
-  k.p1.forEach((v,q)=>{const r=document.querySelector(`input[name="kp1_${q}"][value="${v}"]`);if(r)r.checked=true;});
-  k.p2.forEach((row,q)=>row.forEach((v,s)=>{const r=document.querySelector(`input[name="kp2_${q}_${s}"][value="${v}"]`);if(r)r.checked=true;}));
+
+  k.p1.forEach((v,q)=>{
+    const r=document.querySelector(`input[name="kp1_${q}"][value="${v}"]`);
+    if(r)r.checked=true;
+  });
+
+  k.p2.forEach((row,q)=>row.forEach((v,s)=>{
+    const r=document.querySelector(`input[name="kp2_${q}_${s}"][value="${v}"]`);
+    if(r)r.checked=true;
+  }));
+
   k.p3.forEach((v,q)=>document.getElementById(`kp3_${q}`).value=v);
   k.w1.forEach((v,q)=>document.getElementById(`w1_${q}`).value=v);
   k.w2.forEach((v,q)=>document.getElementById(`w2_${q}`).value=v);
   k.w3.forEach((v,q)=>document.getElementById(`w3_${q}`).value=v);
+
   status("keyStatus","Đã tải đáp án chuẩn và điểm từng câu.");
 };
 
 function setImage(blob){
+  if(!blob)return;
+
   imageBlob=blob;
+
   photo.onload=()=>{
     photo.style.display="block";
     document.getElementById("alignArea").classList.remove("hidden");
-    corners=[];drawCorners();
+    corners=[];
+    drawCorners();
     status("cameraStatus","Ảnh đã sẵn sàng. Chọn bốn dấu vuông căn góc.");
   };
+
   photo.src=URL.createObjectURL(blob);
 }
-document.getElementById("startCamera").onclick=async()=>{
-  try{
-    if(!navigator.mediaDevices?.getUserMedia)throw new Error("Camera cần trình duyệt hỗ trợ và trang HTTPS.");
-    cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});
-    video.srcObject=cameraStream;video.classList.remove("hidden");
-    document.getElementById("takePhoto").disabled=false;
-    document.getElementById("stopCamera").disabled=false;
-    status("cameraStatus","Camera đã mở. Đặt trọn phiếu vào khung hình.");
-  }catch(e){status("cameraStatus","Không mở được camera: "+e.message,true);}
-};
-document.getElementById("takePhoto").onclick=()=>{
-  if(!cameraStream||!video.videoWidth)return;
-  const c=document.getElementById("capture");
-  c.width=video.videoWidth;c.height=video.videoHeight;
-  c.getContext("2d").drawImage(video,0,0,c.width,c.height);
-  c.toBlob(b=>b&&setImage(b),"image/jpeg",0.92);
-};
-document.getElementById("stopCamera").onclick=()=>{
-  if(cameraStream)cameraStream.getTracks().forEach(t=>t.stop());
-  cameraStream=null;video.srcObject=null;video.classList.add("hidden");
+
+/* Tắt camera và giải phóng camera của điện thoại */
+async function stopCamera(){
+  if(cameraStream){
+    cameraStream.getTracks().forEach(track=>track.stop());
+  }
+
+  cameraStream=null;
+  video.srcObject=null;
+  video.classList.add("hidden");
+
   document.getElementById("takePhoto").disabled=true;
   document.getElementById("stopCamera").disabled=true;
+}
+
+/* Chờ video có dữ liệu hình ảnh thật */
+function waitForVideoFrame(timeoutMs=12000){
+  return new Promise((resolve,reject)=>{
+    let finished=false;
+
+    const cleanup=()=>{
+      clearTimeout(timer);
+      video.removeEventListener("loadedmetadata",check);
+      video.removeEventListener("loadeddata",check);
+      video.removeEventListener("canplay",check);
+    };
+
+    const check=()=>{
+      if(video.videoWidth>0&&video.videoHeight>0&&video.readyState>=2&&!finished){
+        finished=true;
+        cleanup();
+        resolve();
+      }
+    };
+
+    const timer=setTimeout(()=>{
+      if(!finished){
+        finished=true;
+        cleanup();
+        reject(new Error("Đã cấp quyền nhưng điện thoại chưa truyền hình ảnh. Hãy tắt camera rồi thử mở lại."));
+      }
+    },timeoutMs);
+
+    video.addEventListener("loadedmetadata",check);
+    video.addEventListener("loadeddata",check);
+    video.addEventListener("canplay",check);
+    check();
+  });
+}
+
+/* Mở camera, đợi đến khi có hình rồi mới báo thành công */
+document.getElementById("startCamera").onclick=async()=>{
+  try{
+    if(!navigator.mediaDevices?.getUserMedia){
+      throw new Error("Camera cần trình duyệt hỗ trợ và trang web HTTPS.");
+    }
+
+    await stopCamera();
+
+    photo.style.display="none";
+    document.getElementById("alignArea").classList.add("hidden");
+    status("cameraStatus","Đang kết nối camera...");
+
+    cameraStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:"environment"}},
+      audio:false
+    });
+
+    video.muted=true;
+    video.autoplay=true;
+    video.playsInline=true;
+    video.srcObject=cameraStream;
+    video.classList.remove("hidden");
+
+    const frameReady=waitForVideoFrame();
+    await video.play();
+    await frameReady;
+
+    document.getElementById("takePhoto").disabled=false;
+    document.getElementById("stopCamera").disabled=false;
+    status("cameraStatus","Camera đang hoạt động. Đặt trọn phiếu vào khung hình.");
+  }catch(e){
+    await stopCamera();
+    status("cameraStatus","Không mở được hình camera: "+(e.message||"Lỗi không xác định."),true);
+  }
 };
-document.getElementById("fileInput").onchange=e=>{if(e.target.files[0])setImage(e.target.files[0]);e.target.value="";};
+
+/* Chụp ảnh từ hình đang hiển thị trong camera */
+document.getElementById("takePhoto").onclick=()=>{
+  if(!cameraStream||!video.videoWidth||!video.videoHeight){
+    status("cameraStatus","Chưa có hình camera để chụp. Hãy tắt rồi mở camera lại.",true);
+    return;
+  }
+
+  const canvas=document.getElementById("capture");
+  canvas.width=video.videoWidth;
+  canvas.height=video.videoHeight;
+
+  const context=canvas.getContext("2d");
+  context.drawImage(video,0,0,canvas.width,canvas.height);
+
+  canvas.toBlob(blob=>{
+    if(blob){
+      setImage(blob);
+    }else{
+      status("cameraStatus","Không tạo được ảnh chụp. Hãy thử lại.",true);
+    }
+  },"image/jpeg",0.92);
+};
+
+document.getElementById("stopCamera").onclick=async()=>{
+  await stopCamera();
+  status("cameraStatus","Đã tắt camera.");
+};
+
+document.getElementById("fileInput").onchange=e=>{
+  if(e.target.files[0])setImage(e.target.files[0]);
+  e.target.value="";
+};
 
 function drawCorners(){
   if(!photo.naturalWidth)return;
-  markCanvas.width=photo.naturalWidth;markCanvas.height=photo.naturalHeight;
+
+  markCanvas.width=photo.naturalWidth;
+  markCanvas.height=photo.naturalHeight;
   markCtx.drawImage(photo,0,0);
+
   corners.forEach((p,i)=>{
-    markCtx.beginPath();markCtx.arc(p.x,p.y,Math.max(10,photo.naturalWidth/70),0,Math.PI*2);
-    markCtx.fillStyle="#ef3028";markCtx.fill();
-    markCtx.fillStyle="white";markCtx.font="bold 22px Arial";markCtx.fillText(String(i+1),p.x+8,p.y-8);
+    markCtx.beginPath();
+    markCtx.arc(p.x,p.y,Math.max(10,photo.naturalWidth/70),0,Math.PI*2);
+    markCtx.fillStyle="#ef3028";
+    markCtx.fill();
+    markCtx.fillStyle="white";
+    markCtx.font="bold 22px Arial";
+    markCtx.fillText(String(i+1),p.x+8,p.y-8);
   });
 }
+
 markCanvas.onclick=e=>{
   if(corners.length===4)return;
+
   const r=markCanvas.getBoundingClientRect();
-  corners.push({x:(e.clientX-r.left)*markCanvas.width/r.width,y:(e.clientY-r.top)*markCanvas.height/r.height});
-  drawCorners();status("scanStatus",`Đã chọn ${corners.length}/4 dấu.`);
+
+  corners.push({
+    x:(e.clientX-r.left)*markCanvas.width/r.width,
+    y:(e.clientY-r.top)*markCanvas.height/r.height
+  });
+
+  drawCorners();
+  status("scanStatus",`Đã chọn ${corners.length}/4 dấu.`);
 };
-document.getElementById("undoCorner").onclick=()=>{corners.pop();drawCorners();};
+
+document.getElementById("undoCorner").onclick=()=>{
+  corners.pop();
+  drawCorners();
+};
 
 function loadCV(){
   if(cvLoading)return cvLoading;
+
   cvLoading=new Promise((resolve,reject)=>{
-    const s=document.createElement("script");s.src="https://docs.opencv.org/4.x/opencv.js";
-    s.onload=()=>{const start=Date.now();(function wait(){
-      if(window.cv&&cv.Mat)resolve(cv);
-      else if(Date.now()-start>45000)reject(new Error("OpenCV tải quá lâu."));
-      else setTimeout(wait,150);
-    })();};
+    const s=document.createElement("script");
+    s.src="https://docs.opencv.org/4.x/opencv.js";
+
+    s.onload=()=>{
+      const start=Date.now();
+
+      (function wait(){
+        if(window.cv&&cv.Mat){
+          resolve(cv);
+        }else if(Date.now()-start>45000){
+          reject(new Error("OpenCV tải quá lâu."));
+        }else{
+          setTimeout(wait,150);
+        }
+      })();
+    };
+
     s.onerror=()=>reject(new Error("Không tải được thư viện xử lý ảnh."));
     document.head.appendChild(s);
   });
+
   return cvLoading;
 }
+
 async function rectify(){
   if(corners.length!==4)throw new Error("Chọn đủ bốn dấu vuông.");
+
   const CV=await loadCV();
   const src=CV.imread(photo);
   const a=CV.matFromArray(4,1,CV.CV_32FC2,corners.flatMap(p=>[p.x,p.y]));
   const b=CV.matFromArray(4,1,CV.CV_32FC2,DEST.flat());
-  const m=CV.getPerspectiveTransform(a,b),out=new CV.Mat();
-  CV.warpPerspective(src,out,m,new CV.Size(W,H),CV.INTER_LINEAR,CV.BORDER_CONSTANT,new CV.Scalar(255,255,255,255));
-  const c=document.createElement("canvas");c.width=W;c.height=H;CV.imshow(c,out);
-  src.delete();a.delete();b.delete();m.delete();out.delete();
+  const m=CV.getPerspectiveTransform(a,b);
+  const out=new CV.Mat();
+
+  CV.warpPerspective(
+    src,
+    out,
+    m,
+    new CV.Size(W,H),
+    CV.INTER_LINEAR,
+    CV.BORDER_CONSTANT,
+    new CV.Scalar(255,255,255,255)
+  );
+
+  const c=document.createElement("canvas");
+  c.width=W;
+  c.height=H;
+  CV.imshow(c,out);
+
+  src.delete();
+  a.delete();
+  b.delete();
+  m.delete();
+  out.delete();
+
   return c;
 }
+
 function fillRatio(im,x,y){
-  let dark=0,n=0;
-  for(let yy=Math.floor(y-4);yy<=y+4;yy++)for(let xx=Math.floor(x-4);xx<=x+4;xx++){
-    if(xx<0||yy<0||xx>=W||yy>=H)continue;
-    const i=(yy*W+xx)*4,d=.299*im.data[i]+.587*im.data[i+1]+.114*im.data[i+2];
-    if(d<145)dark++;n++;
+  let dark=0;
+  let n=0;
+
+  for(let yy=Math.floor(y-4);yy<=y+4;yy++){
+    for(let xx=Math.floor(x-4);xx<=x+4;xx++){
+      if(xx<0||yy<0||xx>=W||yy>=H)continue;
+
+      const i=(yy*W+xx)*4;
+      const d=.299*im.data[i]+.587*im.data[i+1]+.114*im.data[i+2];
+
+      if(d<145)dark++;
+      n++;
+    }
   }
+
   return n?dark/n:0;
 }
+
 function detect(im,pts){
-  const v=pts.map(p=>fillRatio(im,p[0],p[1])).sort((a,b)=>b-a);
-  const sorted=pts.map((p,i)=>({i,v:fillRatio(im,p[0],p[1])})).sort((a,b)=>b.v-a.v);
+  const sorted=pts.map((p,i)=>({
+    i,
+    v:fillRatio(im,p[0],p[1])
+  })).sort((a,b)=>b.v-a.v);
+
   if(sorted[0].v<.20||(sorted[1]&&sorted[1].v>.18))return -1;
   return sorted[0].i;
 }
+
 function readForm(canvas){
-  const im=canvas.getContext("2d").getImageData(0,0,W,H),p1=[],p2=[],p3=[],uncertain=[];
+  const im=canvas.getContext("2d").getImageData(0,0,W,H);
+  const p1=[],p2=[],p3=[],uncertain=[];
+
   for(let q=0;q<12;q++){
-    const panel=Math.floor(q/10),row=q%10;
+    const panel=Math.floor(q/10);
+    const row=q%10;
     const n=detect(im,MCX[panel].map(x=>[x,MCY[row]]));
-    p1.push(n<0?"":"ABCD"[n]);if(n<0)uncertain.push(`Phần I câu ${q+1}`);
+
+    p1.push(n<0?"":"ABCD"[n]);
+    if(n<0)uncertain.push(`Phần I câu ${q+1}`);
   }
+
   for(let q=0;q<4;q++){
     const row=[];
+
     for(let s=0;s<4;s++){
       const n=detect(im,TFX[q].map(x=>[x,TFY[s]]));
-      row.push(n<0?"":n===0?"D":"S");if(n<0)uncertain.push(`Phần II câu ${q+1}${"abcd"[s]}`);
-    }p2.push(row);
+      row.push(n<0?"":n===0?"D":"S");
+
+      if(n<0)uncertain.push(`Phần II câu ${q+1}${"abcd"[s]}`);
+    }
+
+    p2.push(row);
   }
+
   for(let q=0;q<6;q++){
     let digits="";
+
     for(let col=0;col<5;col++){
       const n=detect(im,DIGIT_Y.map(y=>[DIGIT_X[q]+col*DIGIT_STEP,y]));
       digits+=n<0?"":"0123456789"[n];
+
       if(n<0)uncertain.push(`Phần III câu ${q+1}, chữ số ${col+1}`);
     }
+
     p3.push(digits.replace(/^0+(?=\d)/,""));
   }
+
   return {p1,p2,p3,uncertain};
 }
-function normalize(v){return String(v??"").trim().replace(/[−–]/g,"-").replace(",",".");}
+
+function normalize(v){
+  return String(v??"").trim().replace(/[−–]/g,"-").replace(",",".");
+}
+
 function score(scan,key){
   let a=0,b=0,c=0;
-  scan.p1.forEach((v,q)=>{if(v===key.p1[q])a+=key.w1[q];});
+
+  scan.p1.forEach((v,q)=>{
+    if(v===key.p1[q])a+=key.w1[q];
+  });
+
   const fractions=[0,.1,.25,.5,1];
+
   scan.p2.forEach((row,q)=>{
-    let right=0;row.forEach((v,s)=>{if(v&&v===key.p2[q][s])right++;});
+    let right=0;
+    row.forEach((v,s)=>{
+      if(v&&v===key.p2[q][s])right++;
+    });
     b+=key.w2[q]*fractions[right];
   });
+
   scan.p3.forEach((v,q)=>{
-    const x=Number(normalize(v)),y=Number(normalize(key.p3[q]));
-    if(v!==""&&Number.isFinite(x)&&Number.isFinite(y)&&Math.abs(x-y)<1e-6)c+=key.w3[q];
+    const x=Number(normalize(v));
+    const y=Number(normalize(key.p3[q]));
+
+    if(v!==""&&Number.isFinite(x)&&Number.isFinite(y)&&Math.abs(x-y)<1e-6){
+      c+=key.w3[q];
+    }
   });
+
   const r=x=>Math.round((x+Number.EPSILON)*100)/100;
-  const max=key.w1.reduce((x,y)=>x+y,0)+key.w2.reduce((x,y)=>x+y,0)+key.w3.reduce((x,y)=>x+y,0);
+  const max=key.w1.reduce((x,y)=>x+y,0)+
+    key.w2.reduce((x,y)=>x+y,0)+
+    key.w3.reduce((x,y)=>x+y,0);
+
   return {a:r(a),b:r(b),c:r(c),total:r(a+b+c),max:r(max)};
 }
+
 function opts(values,selected){
-  return `<option value="">Chưa đọc</option>`+values.map(v=>`<option value="${v}" ${v===selected?"selected":""}>${v}</option>`).join("");
+  return `<option value="">Chưa đọc</option>`+
+    values.map(v=>`<option value="${v}" ${v===selected?"selected":""}>${v}</option>`).join("");
 }
+
 function renderReview(k){
   document.getElementById("reviewSection").classList.remove("hidden");
-  document.getElementById("reviewP1").innerHTML="<h3>Phần I</h3><div class='row'>"+
-    scanned.p1.map((v,q)=>`<label class='field'>Câu ${q+1}<select data-a='${q}'>${opts(["A","B","C","D"],v)}</select></label>`).join("")+"</div>";
-  document.getElementById("reviewP2").innerHTML="<h3>Phần II</h3><div class='tfgrid'>"+
-    scanned.p2.map((r,q)=>`<div class='tfcard'><b>Câu ${q+1}</b>`+r.map((v,s)=>`<label class='tfline'>${"abcd"[s]}<select data-b='${q}-${s}'>${opts(["D","S"],v)}</select></label>`).join("")+"</div>").join("")+"</div>";
-  document.getElementById("reviewP3").innerHTML="<h3>Phần III — kiểm tra dấu phẩy/dấu âm</h3><div class='row'>"+
-    scanned.p3.map((v,q)=>`<label class='field'>Câu ${q+1}<input data-c='${q}' value="${v}" inputmode='decimal'></label>`).join("")+"</div>";
-  document.querySelectorAll("[data-a]").forEach(e=>e.onchange=()=>{scanned.p1[+e.dataset.a]=e.value;updateScore(k);});
-  document.querySelectorAll("[data-b]").forEach(e=>e.onchange=()=>{const [q,s]=e.dataset.b.split("-").map(Number);scanned.p2[q][s]=e.value;updateScore(k);});
-  document.querySelectorAll("[data-c]").forEach(e=>e.oninput=()=>{scanned.p3[+e.dataset.c]=e.value;updateScore(k);});
+
+  document.getElementById("reviewP1").innerHTML=
+    "<h3>Phần I</h3><div class='row'>"+
+    scanned.p1.map((v,q)=>
+      `<label class='field'>Câu ${q+1}<select data-a='${q}'>${opts(["A","B","C","D"],v)}</select></label>`
+    ).join("")+"</div>";
+
+  document.getElementById("reviewP2").innerHTML=
+    "<h3>Phần II</h3><div class='tfgrid'>"+
+    scanned.p2.map((r,q)=>
+      `<div class='tfcard'><b>Câu ${q+1}</b>`+
+      r.map((v,s)=>
+        `<label class='tfline'>${"abcd"[s]}<select data-b='${q}-${s}'>${opts(["D","S"],v)}</select></label>`
+      ).join("")+"</div>"
+    ).join("")+"</div>";
+
+  document.getElementById("reviewP3").innerHTML=
+    "<h3>Phần III — kiểm tra dấu phẩy/dấu âm</h3><div class='row'>"+
+    scanned.p3.map((v,q)=>
+      `<label class='field'>Câu ${q+1}<input data-c='${q}' value="${v}" inputmode='decimal'></label>`
+    ).join("")+"</div>";
+
+  document.querySelectorAll("[data-a]").forEach(e=>{
+    e.onchange=()=>{
+      scanned.p1[+e.dataset.a]=e.value;
+      updateScore(k);
+    };
+  });
+
+  document.querySelectorAll("[data-b]").forEach(e=>{
+    e.onchange=()=>{
+      const [q,s]=e.dataset.b.split("-").map(Number);
+      scanned.p2[q][s]=e.value;
+      updateScore(k);
+    };
+  });
+
+  document.querySelectorAll("[data-c]").forEach(e=>{
+    e.oninput=()=>{
+      scanned.p3[+e.dataset.c]=e.value;
+      updateScore(k);
+    };
+  });
+
   updateScore(k);
 }
+
 function updateScore(k){
   const s=score(scanned,k);
-  document.getElementById("scoreBox").textContent=`Điểm ${s.total}/${s.max}  |  Phần I ${s.a} · Phần II ${s.b} · Phần III ${s.c}`;
+  document.getElementById("scoreBox").textContent=
+    `Điểm ${s.total}/${s.max}  |  Phần I ${s.a} · Phần II ${s.b} · Phần III ${s.c}`;
 }
+
 document.getElementById("scanButton").onclick=async()=>{
   try{
-    const k=getKey();if(!validKey(k)){status("scanStatus","Nhập đủ đáp án và lưu đáp án chuẩn trước.",true);return;}
+    const k=getKey();
+
+    if(!validKey(k)){
+      status("scanStatus","Nhập đủ đáp án và lưu đáp án chuẩn trước.",true);
+      return;
+    }
+
     status("scanStatus","Đang căn chỉnh và đọc phiếu...");
-    const canvas=await rectify();scanned=readForm(canvas);renderReview(k);
-    status("scanStatus",scanned.uncertain.length?
-      "Cần kiểm tra các ô chưa đọc chắc: "+scanned.uncertain.slice(0,8).join(", "):
-      "Đã đọc xong. Hãy soát lại đáp án trước khi lưu.");
+
+    const canvas=await rectify();
+    scanned=readForm(canvas);
+    renderReview(k);
+
+    status(
+      "scanStatus",
+      scanned.uncertain.length
+        ? "Cần kiểm tra các ô chưa đọc chắc: "+scanned.uncertain.slice(0,8).join(", ")
+        : "Đã đọc xong. Hãy soát lại đáp án trước khi lưu."
+    );
+
     document.getElementById("reviewSection").scrollIntoView({behavior:"smooth"});
-  }catch(e){status("scanStatus","Không đọc được phiếu: "+e.message,true);}
+  }catch(e){
+    status("scanStatus","Không đọc được phiếu: "+e.message,true);
+  }
 };
 
-/* Lưu theo thứ tự trong IndexedDB */
+/* Lưu bài theo thứ tự trong IndexedDB trên thiết bị này */
 function openDB(){
   return new Promise((resolve,reject)=>{
     const r=indexedDB.open("QuizScanTest",1);
-    r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains("papers"))r.result.createObjectStore("papers",{keyPath:"id",autoIncrement:true});};
-    r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
+
+    r.onupgradeneeded=()=>{
+      if(!r.result.objectStoreNames.contains("papers")){
+        r.result.createObjectStore("papers",{keyPath:"id",autoIncrement:true});
+      }
+    };
+
+    r.onsuccess=()=>resolve(r.result);
+    r.onerror=()=>reject(r.error);
   });
 }
+
 async function getPapers(){
   const db=await openDB();
+
   return new Promise((resolve,reject)=>{
     const r=db.transaction("papers","readonly").objectStore("papers").getAll();
-    r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
+    r.onsuccess=()=>resolve(r.result);
+    r.onerror=()=>reject(r.error);
   });
 }
+
 async function savePaper(){
   if(!scanned||!imageBlob)return;
-  const k=getKey();if(!validKey(k)){status("saveStatus","Đáp án chuẩn chưa hợp lệ.",true);return;}
+
+  const k=getKey();
+
+  if(!validKey(k)){
+    status("saveStatus","Đáp án chuẩn chưa hợp lệ.",true);
+    return;
+  }
+
   const papers=await getPapers();
-  const record={seq:papers.length+1,date:new Date().toISOString(),code:k.code,score:score(scanned,k),
-    p1:scanned.p1,p2:scanned.p2,p3:scanned.p3,image:imageBlob};
+
+  const record={
+    seq:papers.length+1,
+    date:new Date().toISOString(),
+    code:k.code,
+    score:score(scanned,k),
+    p1:scanned.p1,
+    p2:scanned.p2,
+    p3:scanned.p3,
+    image:imageBlob
+  };
+
   const db=await openDB();
+
   await new Promise((resolve,reject)=>{
-    const tx=db.transaction("papers","readwrite");tx.objectStore("papers").add(record);
-    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+    const tx=db.transaction("papers","readwrite");
+    tx.objectStore("papers").add(record);
+    tx.oncomplete=resolve;
+    tx.onerror=()=>reject(tx.error);
   });
+
   status("saveStatus",`Đã lưu bài ${String(record.seq).padStart(3,"0")} và ảnh.`);
   showSaved();
 }
-document.getElementById("savePaper").onclick=()=>savePaper().catch(e=>status("saveStatus","Lỗi lưu: "+e.message,true));
+
+document.getElementById("savePaper").onclick=()=>{
+  savePaper().catch(e=>status("saveStatus","Lỗi lưu: "+e.message,true));
+};
+
 document.getElementById("nextPaper").onclick=()=>{
-  scanned=null;imageBlob=null;corners=[];
-  photo.removeAttribute("src");photo.style.display="none";
+  scanned=null;
+  imageBlob=null;
+  corners=[];
+
+  photo.removeAttribute("src");
+  photo.style.display="none";
   document.getElementById("alignArea").classList.add("hidden");
   document.getElementById("reviewSection").classList.add("hidden");
+
   status("cameraStatus","Sẵn sàng quét bài tiếp theo.");
 };
+
 async function showSaved(){
-  const list=await getPapers(),el=document.getElementById("savedList");
-  if(!list.length){el.textContent="Chưa có bài đã lưu.";return;}
-  el.innerHTML="<div class='tablewrap'><table><tr><th>Bài</th><th>Thời gian</th><th>Mã đề</th><th>Điểm</th></tr>"+
-    list.map(x=>`<tr><td>${String(x.seq).padStart(3,"0")}</td><td>${new Date(x.date).toLocaleString("vi-VN")}</td><td>${x.code}</td><td>${x.score.total}/${x.score.max}</td></tr>`).join("")+
+  const list=await getPapers();
+  const el=document.getElementById("savedList");
+
+  if(!list.length){
+    el.textContent="Chưa có bài đã lưu.";
+    return;
+  }
+
+  el.innerHTML=
+    "<div class='tablewrap'><table><tr><th>Bài</th><th>Thời gian</th><th>Mã đề</th><th>Điểm</th></tr>"+
+    list.map(x=>
+      `<tr><td>${String(x.seq).padStart(3,"0")}</td><td>${new Date(x.date).toLocaleString("vi-VN")}</td><td>${x.code}</td><td>${x.score.total}/${x.score.max}</td></tr>`
+    ).join("")+
     "</table></div>";
 }
-document.getElementById("refreshList").onclick=showSaved;
-document.getElementById("exportCsv").onclick=async()=>{
-  const list=await getPapers();if(!list.length){alert("Chưa có bài đã lưu.");return;}
-  const rows=[["Bài","Thời gian","Mã đề","Phần I","Phần II","Phần III","Tổng","Tối đa"],
-    ...list.map(x=>[x.seq,new Date(x.date).toLocaleString("vi-VN"),x.code,x.score.a,x.score.b,x.score.c,x.score.total,x.score.max])];
-  const csv="\uFEFF"+rows.map(r=>r.map(x=>`"${String(x??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");
-  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
-  a.download="bang-diem.csv";a.click();URL.revokeObjectURL(a.href);
+
+document.getElementById("refreshList").onclick=()=>{
+  showSaved().catch(e=>alert("Không tải được danh sách: "+e.message));
 };
+
+document.getElementById("exportCsv").onclick=async()=>{
+  try{
+    const list=await getPapers();
+
+    if(!list.length){
+      alert("Chưa có bài đã lưu.");
+      return;
+    }
+
+    const rows=[
+      ["Bài","Thời gian","Mã đề","Phần I","Phần II","Phần III","Tổng","Tối đa"],
+      ...list.map(x=>[
+        x.seq,
+        new Date(x.date).toLocaleString("vi-VN"),
+        x.code,
+        x.score.a,
+        x.score.b,
+        x.score.c,
+        x.score.total,
+        x.score.max
+      ])
+    ];
+
+    const csv="\uFEFF"+rows.map(r=>
+      r.map(x=>`"${String(x??"").replace(/"/g,'""')}"`).join(",")
+    ).join("\r\n");
+
+    const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+    const a=document.createElement("a");
+    a.href=url;
+    a.download="bang-diem.csv";
+    a.click();
+
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }catch(e){
+    alert("Không xuất được bảng điểm: "+e.message);
+  }
+};
+
 showSaved().catch(()=>{});
 </script>
 </body>
