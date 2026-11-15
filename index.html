@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Chấm phiếu trắc nghiệm — Bản thử</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#f2f5fa;color:#172033;font-family:Arial,sans-serif}
+    header{padding:17px;background:#1858c7;color:white}
+    header h1{margin:0 0 5px;font-size:21px}
+    main{max-width:950px;margin:16px auto;padding:0 12px 40px}
+    section{background:#fff;border:1px solid #dce4ef;border-radius:12px;padding:15px;margin-bottom:14px}
+    h2{font-size:18px;margin:0 0 12px}
+    h3{font-size:15px;margin:18px 0 8px}
+    .note{padding:11px;background:#fff7df;border-left:4px solid #dfa000;line-height:1.5}
+    .muted{font-size:13px;color:#637087;line-height:1.5}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+    .field{flex:1 1 150px}
+    label.field{font-size:14px;font-weight:bold}
+    input,select{font:inherit;border:1px solid #c8d2e0;border-radius:7px;padding:7px;min-height:38px}
+    .field input{display:block;width:100%;margin-top:5px}
+    button{border:0;border-radius:8px;background:#1858c7;color:white;font-weight:bold;padding:10px 13px;min-height:40px;cursor:pointer}
+    button.secondary{background:#e8eef8;color:#183653}
+    button.danger{background:#b42318}
+    button:disabled{opacity:.5}
+    .buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .keyrow{display:grid;grid-template-columns:72px 1fr 100px;gap:8px;align-items:center;border-bottom:1px solid #edf0f5;padding:7px 0}
+    .choice-set{display:flex;gap:7px;flex-wrap:wrap}
+    .choice{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:42px;min-height:38px;padding:4px 9px;border:1px solid #d5deea;border-radius:20px;background:#f5f7fb;cursor:pointer}
+    .choice input{width:16px;height:16px;min-height:0;margin:0;accent-color:#165ac8}
+    .keyrow input.weight{width:88px}
+    .tfgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .tfcard{border:1px solid #e0e6ef;border-radius:9px;padding:9px}
+    .tfhead{font-weight:bold;display:flex;justify-content:space-between;align-items:center}
+    .tfline{display:grid;grid-template-columns:32px 1fr 1fr;gap:6px;align-items:center;padding:5px 0}
+    .tfline .choice{min-width:0}
+    .shortrow{display:grid;grid-template-columns:72px 1fr 100px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #edf0f5}
+    .shortrow input.answer{width:100%}
+    video,#photo{width:100%;max-height:65vh;object-fit:contain;background:#111;border-radius:8px}
+    #photo{display:none;background:white}
+    #markCanvas{width:100%;max-height:70vh;object-fit:contain;border:1px solid #ccd5e2;touch-action:manipulation}
+    .status{margin-top:8px;min-height:20px;line-height:1.4}
+    .ok{color:#087443}.bad{color:#b42318}
+    .score{padding:12px;background:#e7f7ed;border-radius:8px;color:#14502f;font-weight:bold;font-size:19px;margin:10px 0}
+    .hidden{display:none!important}
+    .tablewrap{overflow-x:auto}
+    table{border-collapse:collapse;width:100%;margin-top:10px}
+    th,td{border-bottom:1px solid #e1e7f0;padding:8px;text-align:left;font-size:13px}
+    th{background:#f3f6fb}
+    @media(max-width:560px){
+      header h1{font-size:19px}
+      section{padding:12px}
+      .keyrow{grid-template-columns:58px 1fr 80px;gap:5px}
+      .choice{min-width:35px;padding:4px 6px}
+      .keyrow input.weight{width:75px}
+      .tfgrid{grid-template-columns:1fr}
+      .shortrow{grid-template-columns:58px 1fr 80px}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Chấm phiếu trắc nghiệm THPT</h1>
+  <div>Bản thử: nhập đáp án chuẩn, quét phiếu, kiểm tra rồi lưu điểm.</div>
+</header>
+
+<main>
+  <section>
+    <h2>1. Nhập đáp án chuẩn và điểm từng câu</h2>
+    <p class="muted">
+      Chọn đáp án ngay trên bảng. Có thể sửa điểm tối đa của từng câu;
+      riêng Phần II, nhập điểm tối đa riêng cho từng câu.
+    </p>
+    <div class="row">
+      <label class="field">Mã đề
+        <input id="examCode" placeholder="Ví dụ: 1024">
+      </label>
+    </div>
+
+    <h3>Phần I — 12 câu chọn A, B, C hoặc D</h3>
+    <div id="keyP1"></div>
+
+    <h3>Phần II — 4 câu Đúng/Sai</h3>
+    <div id="keyP2" class="tfgrid"></div>
+    <p class="muted">
+      Điểm mỗi câu Phần II được nhập riêng. Tỉ lệ điểm theo số ý đúng mặc định là
+      0%, 10%, 25%, 50%, 100% điểm của câu.
+    </p>
+
+    <h3>Phần III — 6 câu trả lời ngắn</h3>
+    <div id="keyP3"></div>
+
+    <div class="buttons">
+      <button id="saveKey">Lưu đáp án chuẩn</button>
+      <button id="loadKey" class="secondary">Tải đáp án đã lưu</button>
+    </div>
+    <div id="keyStatus" class="status"></div>
+  </section>
+
+  <section>
+    <h2>2. Chụp hoặc chọn ảnh phiếu</h2>
+    <div class="buttons">
+      <button id="startCamera">Mở camera</button>
+      <button id="takePhoto" disabled>Chụp phiếu</button>
+      <label class="choice">Chọn ảnh
+        <input id="fileInput" type="file" accept="image/*" style="display:none">
+      </label>
+      <button id="stopCamera" class="secondary" disabled>Tắt camera</button>
+    </div>
+    <p class="muted">Chụp trọn phiếu, đủ sáng và thấy rõ bốn dấu vuông căn góc.</p>
+    <video id="video" autoplay playsinline class="hidden"></video>
+    <canvas id="capture" class="hidden"></canvas>
+    <img id="photo" alt="Ảnh phiếu">
+    <div id="cameraStatus" class="status"></div>
+
+    <div id="alignArea" class="hidden">
+      <p class="muted">
+        Chạm tâm bốn dấu vuông ngoài của phiếu theo thứ tự:
+        trên trái → trên phải → dưới phải → dưới trái.
+      </p>
+      <canvas id="markCanvas"></canvas>
+      <div class="buttons">
+        <button id="undoCorner" class="secondary">Bỏ điểm cuối</button>
+        <button id="scanButton">Căn chỉnh và đọc phiếu</button>
+      </div>
+      <div id="scanStatus" class="status"></div>
+    </div>
+  </section>
+
+  <section id="reviewSection" class="hidden">
+    <h2>3. Kiểm tra kết quả máy đọc</h2>
+    <p class="note">
+      Sửa các câu máy đọc sai hoặc chưa rõ. Hãy kiểm tra kỹ Phần III nếu đáp án có dấu phẩy
+      hoặc dấu âm trước khi lưu điểm.
+    </p>
+    <div id="reviewP1"></div>
+    <div id="reviewP2"></div>
+    <div id="reviewP3"></div>
+    <div id="scoreBox" class="score"></div>
+    <div class="buttons">
+      <button id="savePaper">Lưu ảnh và điểm</button>
+      <button id="nextPaper" class="secondary">Bài tiếp theo</button>
+    </div>
+    <div id="saveStatus" class="status"></div>
+  </section>
+
+  <section>
+    <h2>4. Bài đã lưu trên thiết bị này</h2>
+    <p class="muted">Ảnh và điểm lưu trong trình duyệt của thiết bị đang chấm.</p>
+    <div class="buttons">
+      <button id="refreshList" class="secondary">Cập nhật danh sách</button>
+      <button id="exportCsv" class="secondary">Xuất bảng điểm CSV</button>
+    </div>
+    <div id="savedList"></div>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+const W=724,H=1024;
+const DEST=[[41,61],[683,61],[683,964],[41,964]];
+const MCX=[[79,112,145,178],[218,251,284,317],[359,392,425,458],[497,530,563,596]];
+const MCY=[386,403,420,437,454,471,488,505,522,539];
+const TFX=[[79,111],[158,190],[237,270],[319,351]];
+const TFY=[619,636,653,670];
+const DIGIT_X=[79,184,289,394,498,603];
+const DIGIT_Y=Array.from({length:10},(_,i)=>794+i*15.4);
+const DIGIT_STEP=14.8;
+
+let cameraStream=null, imageBlob=null, corners=[], scanned=null, cvLoading=null;
+const video=document.getElementById("video");
+const photo=document.getElementById("photo");
+const markCanvas=document.getElementById("markCanvas");
+const markCtx=markCanvas.getContext("2d");
+
+function radio(value,name,checked,label){
+  return `<label class="choice"><input type="radio" name="${name}" value="${value}" ${checked?"checked":""}><span>${label}</span></label>`;
+}
+function buildKeyUI(){
+  const p1=document.getElementById("keyP1");
+  for(let q=0;q<12;q++){
+    p1.insertAdjacentHTML("beforeend",
+      `<div class="keyrow"><b>Câu ${q+1}</b><div class="choice-set">`+
+      ["A","B","C","D"].map(v=>radio(v,`kp1_${q}`,false,v)).join("")+
+      `</div><label>Điểm<br><input class="weight" type="number" min="0" step="0.01" value="0.25" id="w1_${q}"></label></div>`);
+  }
+  const p2=document.getElementById("keyP2");
+  for(let q=0;q<4;q++){
+    let html=`<div class="tfcard"><div class="tfhead"><span>Câu ${q+1}</span><label>Điểm tối đa <input class="weight" id="w2_${q}" type="number" min="0" step="0.01" value="1"></label></div>`;
+    for(let s=0;s<4;s++){
+      html+=`<div class="tfline"><b>${"abcd"[s]})</b><div>${radio("D",`kp2_${q}_${s}`,false,"Đúng")}</div><div>${radio("S",`kp2_${q}_${s}`,false,"Sai")}</div></div>`;
+    }
+    html+="</div>";
+    p2.insertAdjacentHTML("beforeend",html);
+  }
+  const p3=document.getElementById("keyP3");
+  for(let q=0;q<6;q++){
+    p3.insertAdjacentHTML("beforeend",
+      `<div class="shortrow"><b>Câu ${q+1}</b><input class="answer" id="kp3_${q}" placeholder="Đáp án chuẩn"><label>Điểm<br><input class="weight" id="w3_${q}" type="number" min="0" step="0.01" value="0.5"></label></div>`);
+  }
+}
+buildKeyUI();
+
+function getChecked(name){
+  return document.querySelector(`input[name="${name}"]:checked`)?.value||"";
+}
+function getKey(){
+  return {
+    code:document.getElementById("examCode").value.trim(),
+    p1:Array.from({length:12},(_,q)=>getChecked(`kp1_${q}`)),
+    p2:Array.from({length:4},(_,q)=>Array.from({length:4},(_,s)=>getChecked(`kp2_${q}_${s}`))),
+    p3:Array.from({length:6},(_,q)=>document.getElementById(`kp3_${q}`).value.trim()),
+    w1:Array.from({length:12},(_,q)=>Number(document.getElementById(`w1_${q}`).value)),
+    w2:Array.from({length:4},(_,q)=>Number(document.getElementById(`w2_${q}`).value)),
+    w3:Array.from({length:6},(_,q)=>Number(document.getElementById(`w3_${q}`).value)),
+    fractions:[0,0.1,0.25,0.5,1]
+  };
+}
+function validKey(k){
+  return k.code&&k.p1.every(x=>["A","B","C","D"].includes(x))&&
+    k.p2.every(r=>r.every(x=>x==="D"||x==="S"))&&
+    k.p3.every(x=>x!=="")&&
+    [...k.w1,...k.w2,...k.w3].every(x=>Number.isFinite(x)&&x>=0);
+}
+function status(id,text,error=false){
+  const e=document.getElementById(id);
+  e.textContent=text;e.className="status "+(error?"bad":"ok");
+}
+document.getElementById("saveKey").onclick=()=>{
+  const k=getKey();
+  if(!validKey(k)){status("keyStatus","Nhập mã đề, chọn đủ đáp án và nhập điểm hợp lệ cho từng câu.",true);return;}
+  localStorage.setItem("omr_key_"+k.code,JSON.stringify(k));
+  localStorage.setItem("omr_last_key",k.code);
+  status("keyStatus","Đã lưu đáp án và điểm từng câu trên thiết bị.");
+};
+document.getElementById("loadKey").onclick=()=>{
+  const code=document.getElementById("examCode").value.trim()||localStorage.getItem("omr_last_key")||"";
+  const k=JSON.parse(localStorage.getItem("omr_key_"+code)||"null");
+  if(!k){status("keyStatus","Không tìm thấy đáp án đã lưu cho mã đề này.",true);return;}
+  document.getElementById("examCode").value=k.code;
+  k.p1.forEach((v,q)=>{const r=document.querySelector(`input[name="kp1_${q}"][value="${v}"]`);if(r)r.checked=true;});
+  k.p2.forEach((row,q)=>row.forEach((v,s)=>{const r=document.querySelector(`input[name="kp2_${q}_${s}"][value="${v}"]`);if(r)r.checked=true;}));
+  k.p3.forEach((v,q)=>document.getElementById(`kp3_${q}`).value=v);
+  k.w1.forEach((v,q)=>document.getElementById(`w1_${q}`).value=v);
+  k.w2.forEach((v,q)=>document.getElementById(`w2_${q}`).value=v);
+  k.w3.forEach((v,q)=>document.getElementById(`w3_${q}`).value=v);
+  status("keyStatus","Đã tải đáp án chuẩn và điểm từng câu.");
+};
+
+function setImage(blob){
+  imageBlob=blob;
+  photo.onload=()=>{
+    photo.style.display="block";
+    document.getElementById("alignArea").classList.remove("hidden");
+    corners=[];drawCorners();
+    status("cameraStatus","Ảnh đã sẵn sàng. Chọn bốn dấu vuông căn góc.");
+  };
+  photo.src=URL.createObjectURL(blob);
+}
+document.getElementById("startCamera").onclick=async()=>{
+  try{
+    if(!navigator.mediaDevices?.getUserMedia)throw new Error("Camera cần trình duyệt hỗ trợ và trang HTTPS.");
+    cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});
+    video.srcObject=cameraStream;video.classList.remove("hidden");
+    document.getElementById("takePhoto").disabled=false;
+    document.getElementById("stopCamera").disabled=false;
+    status("cameraStatus","Camera đã mở. Đặt trọn phiếu vào khung hình.");
+  }catch(e){status("cameraStatus","Không mở được camera: "+e.message,true);}
+};
+document.getElementById("takePhoto").onclick=()=>{
+  if(!cameraStream||!video.videoWidth)return;
+  const c=document.getElementById("capture");
+  c.width=video.videoWidth;c.height=video.videoHeight;
+  c.getContext("2d").drawImage(video,0,0,c.width,c.height);
+  c.toBlob(b=>b&&setImage(b),"image/jpeg",0.92);
+};
+document.getElementById("stopCamera").onclick=()=>{
+  if(cameraStream)cameraStream.getTracks().forEach(t=>t.stop());
+  cameraStream=null;video.srcObject=null;video.classList.add("hidden");
+  document.getElementById("takePhoto").disabled=true;
+  document.getElementById("stopCamera").disabled=true;
+};
+document.getElementById("fileInput").onchange=e=>{if(e.target.files[0])setImage(e.target.files[0]);e.target.value="";};
+
+function drawCorners(){
+  if(!photo.naturalWidth)return;
+  markCanvas.width=photo.naturalWidth;markCanvas.height=photo.naturalHeight;
+  markCtx.drawImage(photo,0,0);
+  corners.forEach((p,i)=>{
+    markCtx.beginPath();markCtx.arc(p.x,p.y,Math.max(10,photo.naturalWidth/70),0,Math.PI*2);
+    markCtx.fillStyle="#ef3028";markCtx.fill();
+    markCtx.fillStyle="white";markCtx.font="bold 22px Arial";markCtx.fillText(String(i+1),p.x+8,p.y-8);
+  });
+}
+markCanvas.onclick=e=>{
+  if(corners.length===4)return;
+  const r=markCanvas.getBoundingClientRect();
+  corners.push({x:(e.clientX-r.left)*markCanvas.width/r.width,y:(e.clientY-r.top)*markCanvas.height/r.height});
+  drawCorners();status("scanStatus",`Đã chọn ${corners.length}/4 dấu.`);
+};
+document.getElementById("undoCorner").onclick=()=>{corners.pop();drawCorners();};
+
+function loadCV(){
+  if(cvLoading)return cvLoading;
+  cvLoading=new Promise((resolve,reject)=>{
+    const s=document.createElement("script");s.src="https://docs.opencv.org/4.x/opencv.js";
+    s.onload=()=>{const start=Date.now();(function wait(){
+      if(window.cv&&cv.Mat)resolve(cv);
+      else if(Date.now()-start>45000)reject(new Error("OpenCV tải quá lâu."));
+      else setTimeout(wait,150);
+    })();};
+    s.onerror=()=>reject(new Error("Không tải được thư viện xử lý ảnh."));
+    document.head.appendChild(s);
+  });
+  return cvLoading;
+}
+async function rectify(){
+  if(corners.length!==4)throw new Error("Chọn đủ bốn dấu vuông.");
+  const CV=await loadCV();
+  const src=CV.imread(photo);
+  const a=CV.matFromArray(4,1,CV.CV_32FC2,corners.flatMap(p=>[p.x,p.y]));
+  const b=CV.matFromArray(4,1,CV.CV_32FC2,DEST.flat());
+  const m=CV.getPerspectiveTransform(a,b),out=new CV.Mat();
+  CV.warpPerspective(src,out,m,new CV.Size(W,H),CV.INTER_LINEAR,CV.BORDER_CONSTANT,new CV.Scalar(255,255,255,255));
+  const c=document.createElement("canvas");c.width=W;c.height=H;CV.imshow(c,out);
+  src.delete();a.delete();b.delete();m.delete();out.delete();
+  return c;
+}
+function fillRatio(im,x,y){
+  let dark=0,n=0;
+  for(let yy=Math.floor(y-4);yy<=y+4;yy++)for(let xx=Math.floor(x-4);xx<=x+4;xx++){
+    if(xx<0||yy<0||xx>=W||yy>=H)continue;
+    const i=(yy*W+xx)*4,d=.299*im.data[i]+.587*im.data[i+1]+.114*im.data[i+2];
+    if(d<145)dark++;n++;
+  }
+  return n?dark/n:0;
+}
+function detect(im,pts){
+  const v=pts.map(p=>fillRatio(im,p[0],p[1])).sort((a,b)=>b-a);
+  const sorted=pts.map((p,i)=>({i,v:fillRatio(im,p[0],p[1])})).sort((a,b)=>b.v-a.v);
+  if(sorted[0].v<.20||(sorted[1]&&sorted[1].v>.18))return -1;
+  return sorted[0].i;
+}
+function readForm(canvas){
+  const im=canvas.getContext("2d").getImageData(0,0,W,H),p1=[],p2=[],p3=[],uncertain=[];
+  for(let q=0;q<12;q++){
+    const panel=Math.floor(q/10),row=q%10;
+    const n=detect(im,MCX[panel].map(x=>[x,MCY[row]]));
+    p1.push(n<0?"":"ABCD"[n]);if(n<0)uncertain.push(`Phần I câu ${q+1}`);
+  }
+  for(let q=0;q<4;q++){
+    const row=[];
+    for(let s=0;s<4;s++){
+      const n=detect(im,TFX[q].map(x=>[x,TFY[s]]));
+      row.push(n<0?"":n===0?"D":"S");if(n<0)uncertain.push(`Phần II câu ${q+1}${"abcd"[s]}`);
+    }p2.push(row);
+  }
+  for(let q=0;q<6;q++){
+    let digits="";
+    for(let col=0;col<5;col++){
+      const n=detect(im,DIGIT_Y.map(y=>[DIGIT_X[q]+col*DIGIT_STEP,y]));
+      digits+=n<0?"":"0123456789"[n];
+      if(n<0)uncertain.push(`Phần III câu ${q+1}, chữ số ${col+1}`);
+    }
+    p3.push(digits.replace(/^0+(?=\d)/,""));
+  }
+  return {p1,p2,p3,uncertain};
+}
+function normalize(v){return String(v??"").trim().replace(/[−–]/g,"-").replace(",",".");}
+function score(scan,key){
+  let a=0,b=0,c=0;
+  scan.p1.forEach((v,q)=>{if(v===key.p1[q])a+=key.w1[q];});
+  const fractions=[0,.1,.25,.5,1];
+  scan.p2.forEach((row,q)=>{
+    let right=0;row.forEach((v,s)=>{if(v&&v===key.p2[q][s])right++;});
+    b+=key.w2[q]*fractions[right];
+  });
+  scan.p3.forEach((v,q)=>{
+    const x=Number(normalize(v)),y=Number(normalize(key.p3[q]));
+    if(v!==""&&Number.isFinite(x)&&Number.isFinite(y)&&Math.abs(x-y)<1e-6)c+=key.w3[q];
+  });
+  const r=x=>Math.round((x+Number.EPSILON)*100)/100;
+  const max=key.w1.reduce((x,y)=>x+y,0)+key.w2.reduce((x,y)=>x+y,0)+key.w3.reduce((x,y)=>x+y,0);
+  return {a:r(a),b:r(b),c:r(c),total:r(a+b+c),max:r(max)};
+}
+function opts(values,selected){
+  return `<option value="">Chưa đọc</option>`+values.map(v=>`<option value="${v}" ${v===selected?"selected":""}>${v}</option>`).join("");
+}
+function renderReview(k){
+  document.getElementById("reviewSection").classList.remove("hidden");
+  document.getElementById("reviewP1").innerHTML="<h3>Phần I</h3><div class='row'>"+
+    scanned.p1.map((v,q)=>`<label class='field'>Câu ${q+1}<select data-a='${q}'>${opts(["A","B","C","D"],v)}</select></label>`).join("")+"</div>";
+  document.getElementById("reviewP2").innerHTML="<h3>Phần II</h3><div class='tfgrid'>"+
+    scanned.p2.map((r,q)=>`<div class='tfcard'><b>Câu ${q+1}</b>`+r.map((v,s)=>`<label class='tfline'>${"abcd"[s]}<select data-b='${q}-${s}'>${opts(["D","S"],v)}</select></label>`).join("")+"</div>").join("")+"</div>";
+  document.getElementById("reviewP3").innerHTML="<h3>Phần III — kiểm tra dấu phẩy/dấu âm</h3><div class='row'>"+
+    scanned.p3.map((v,q)=>`<label class='field'>Câu ${q+1}<input data-c='${q}' value="${v}" inputmode='decimal'></label>`).join("")+"</div>";
+  document.querySelectorAll("[data-a]").forEach(e=>e.onchange=()=>{scanned.p1[+e.dataset.a]=e.value;updateScore(k);});
+  document.querySelectorAll("[data-b]").forEach(e=>e.onchange=()=>{const [q,s]=e.dataset.b.split("-").map(Number);scanned.p2[q][s]=e.value;updateScore(k);});
+  document.querySelectorAll("[data-c]").forEach(e=>e.oninput=()=>{scanned.p3[+e.dataset.c]=e.value;updateScore(k);});
+  updateScore(k);
+}
+function updateScore(k){
+  const s=score(scanned,k);
+  document.getElementById("scoreBox").textContent=`Điểm ${s.total}/${s.max}  |  Phần I ${s.a} · Phần II ${s.b} · Phần III ${s.c}`;
+}
+document.getElementById("scanButton").onclick=async()=>{
+  try{
+    const k=getKey();if(!validKey(k)){status("scanStatus","Nhập đủ đáp án và lưu đáp án chuẩn trước.",true);return;}
+    status("scanStatus","Đang căn chỉnh và đọc phiếu...");
+    const canvas=await rectify();scanned=readForm(canvas);renderReview(k);
+    status("scanStatus",scanned.uncertain.length?
+      "Cần kiểm tra các ô chưa đọc chắc: "+scanned.uncertain.slice(0,8).join(", "):
+      "Đã đọc xong. Hãy soát lại đáp án trước khi lưu.");
+    document.getElementById("reviewSection").scrollIntoView({behavior:"smooth"});
+  }catch(e){status("scanStatus","Không đọc được phiếu: "+e.message,true);}
+};
+
+/* Lưu theo thứ tự trong IndexedDB */
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const r=indexedDB.open("QuizScanTest",1);
+    r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains("papers"))r.result.createObjectStore("papers",{keyPath:"id",autoIncrement:true});};
+    r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
+  });
+}
+async function getPapers(){
+  const db=await openDB();
+  return new Promise((resolve,reject)=>{
+    const r=db.transaction("papers","readonly").objectStore("papers").getAll();
+    r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
+  });
+}
+async function savePaper(){
+  if(!scanned||!imageBlob)return;
+  const k=getKey();if(!validKey(k)){status("saveStatus","Đáp án chuẩn chưa hợp lệ.",true);return;}
+  const papers=await getPapers();
+  const record={seq:papers.length+1,date:new Date().toISOString(),code:k.code,score:score(scanned,k),
+    p1:scanned.p1,p2:scanned.p2,p3:scanned.p3,image:imageBlob};
+  const db=await openDB();
+  await new Promise((resolve,reject)=>{
+    const tx=db.transaction("papers","readwrite");tx.objectStore("papers").add(record);
+    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+  });
+  status("saveStatus",`Đã lưu bài ${String(record.seq).padStart(3,"0")} và ảnh.`);
+  showSaved();
+}
+document.getElementById("savePaper").onclick=()=>savePaper().catch(e=>status("saveStatus","Lỗi lưu: "+e.message,true));
+document.getElementById("nextPaper").onclick=()=>{
+  scanned=null;imageBlob=null;corners=[];
+  photo.removeAttribute("src");photo.style.display="none";
+  document.getElementById("alignArea").classList.add("hidden");
+  document.getElementById("reviewSection").classList.add("hidden");
+  status("cameraStatus","Sẵn sàng quét bài tiếp theo.");
+};
+async function showSaved(){
+  const list=await getPapers(),el=document.getElementById("savedList");
+  if(!list.length){el.textContent="Chưa có bài đã lưu.";return;}
+  el.innerHTML="<div class='tablewrap'><table><tr><th>Bài</th><th>Thời gian</th><th>Mã đề</th><th>Điểm</th></tr>"+
+    list.map(x=>`<tr><td>${String(x.seq).padStart(3,"0")}</td><td>${new Date(x.date).toLocaleString("vi-VN")}</td><td>${x.code}</td><td>${x.score.total}/${x.score.max}</td></tr>`).join("")+
+    "</table></div>";
+}
+document.getElementById("refreshList").onclick=showSaved;
+document.getElementById("exportCsv").onclick=async()=>{
+  const list=await getPapers();if(!list.length){alert("Chưa có bài đã lưu.");return;}
+  const rows=[["Bài","Thời gian","Mã đề","Phần I","Phần II","Phần III","Tổng","Tối đa"],
+    ...list.map(x=>[x.seq,new Date(x.date).toLocaleString("vi-VN"),x.code,x.score.a,x.score.b,x.score.c,x.score.total,x.score.max])];
+  const csv="\uFEFF"+rows.map(r=>r.map(x=>`"${String(x??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download="bang-diem.csv";a.click();URL.revokeObjectURL(a.href);
+};
+showSaved().catch(()=>{});
+</script>
+</body>
+</html>
